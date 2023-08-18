@@ -1,0 +1,98 @@
+buildscript {
+	repositories {
+		mavenCentral()
+		maven { url = "https://maven.minecraftforge.net/" }
+		maven { url = 'https://repo.spongepowered.org/repository/maven-public/' }
+	}
+	
+	dependencies {
+		classpath group: "net.minecraftforge.gradle", name: "ForgeGradle", version: "5.1.+"
+		classpath group: 'org.spongepowered', name: 'mixingradle', version: '0.7-SNAPSHOT'
+	}
+}
+
+apply plugin: "java"
+apply plugin: "net.minecraftforge.gradle"
+apply plugin: 'org.spongepowered.mixin'
+
+java.toolchain.languageVersion = JavaLanguageVersion.of(8)
+compileJava {
+	sourceCompatibility = "8"
+	targetCompatibility = "8"
+
+
+
+}
+
+repositories {
+	maven {
+		url = "https://maven.minecraftforge.net/"
+	}
+	maven {
+		url 'https://maven.cleanroommc.com'
+	}
+}
+
+dependencies {
+	minecraft "net.minecraftforge:forge:1.12.2-14.23.5.2860"
+
+	compileOnly ('zone.rong:mixinbooter:8.3')
+
+	implementation files("lib/eguilib-0.1.2.jar")
+
+	//A necessary step for mixin.
+	annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
+}
+
+minecraft {
+	mappings channel: "stable", version: "39-1.12"
+	
+
+	runs {
+		"client" {
+			workingDirectory file("./run")
+			mods { "${project.name}" { source sourceSets.main } }
+		}
+		
+		"server" {
+			workingDirectory file("./run/server")
+			mods { "${project.name}" { source sourceSets.main } }
+		}
+	}
+}
+
+processResources {
+	inputs.property "version", project.version
+	
+	filesMatching("mcmod.info") {
+		expand "version": project.version
+	}
+}
+
+//When Forge 1.12 loads mods from a directory that's been put on the classpath, it expects to find resources in the same directory.
+//Default Gradle behavior puts resources in ./build/resources/main instead of ./build/classes/main/java. Let's change that.
+sourceSets.all { it.output.resourcesDir = it.output.classesDirs.getFiles().iterator().next() }
+
+jar {
+	manifest {
+		attributes(
+				//Register MixinTweaker to FML and provide a side effect that FML will ignore "FMLCorePlugin" attribute.
+				//Use this attribute's side effect to avoid FML to load this core mod's IFMLLoadingPlugin class.
+				//Because this class implements interface IEarlyMixinLoader and this interface will be loaded after mod "mixinbooter".
+				//However, FML load core mods in alphabetical order which may load this mod before "mixinbooter".
+				'TweakClass': 'org.spongepowered.asm.launch.MixinTweaker',
+				//To tell Mixin to load this core mod's IFMLLoadingPlugin class. It will after FML loading all core mods.
+				'ForceLoadAsMod' : 'true',
+				//The attribute to load this core mod.
+				'FMLCorePlugin': 'dr.magicalstone.controlling_reforge.core.CoreBoot',
+				//The attribute to tell FML or Mixin to find @Mod annotation in this core mod's jar file.
+				'FMLCorePluginContainsFMLMod' : 'true'
+		)
+	}
+}
+
+mixin {
+   // MixinGradle Settings
+   add sourceSets.main, 'cotrolling_reforge.refmap.json'
+   //config 'cotrolling_reforge.mixins.json'
+}

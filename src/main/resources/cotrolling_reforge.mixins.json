@@ -1,0 +1,12 @@
+{
+  "required": true,
+  "package": "dr.magicalstone.controlling_reforge.core.mixin",
+  "compatibilityLevel": "JAVA_8",
+  "refmap": "cotrolling_reforge.refmap.json",
+  "mixins": [
+  ],
+  "client": [
+    "KeyBindingMixin"
+  ],
+  "minVersion": "0.8"
+}
