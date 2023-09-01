@@ -9,7 +9,7 @@ import java.util.function.LongBinaryOperator;
 /**
  * A segment tree {@link FixedSizeSegmentTree} whose element Type is primitive {@link long}.
  * All methods work in the same way as {@link FixedSizeSegmentTree}.
- * There will be other primitive segment trees of {@link boolean} and {@link double}, but no for {@link byte}, {@link short}, {@link int}, {@link float}, {@link char}.
+ * There will be other primitive segment trees of {@link double}, but no for {@link byte}, {@link short}, {@link int}, {@link float}, {@link char}.
  */
 public class FixedSizeIntegerSegmentTree extends FixedSizeSegmentTree<Long> {
 
@@ -58,6 +58,12 @@ public class FixedSizeIntegerSegmentTree extends FixedSizeSegmentTree<Long> {
         }
     }
 
+    protected FixedSizeIntegerSegmentTree(int size, LongBinaryOperator operator, long[] elements) {
+        super(size, null, (Long[]) null);
+        this.operator = operator;
+        this.elements = elements;
+    }
+
     public long setValueAndGetCombination(int index, long value) {
         int elementRealIndex = realIndexIndex[index];
         elements[elementRealIndex] = value;
@@ -81,6 +87,12 @@ public class FixedSizeIntegerSegmentTree extends FixedSizeSegmentTree<Long> {
             }
         }
         return rightChild;
+    }
+
+    public long set(int index, long element) {
+        long lastValue = get(index);
+        setValueAndGetCombination(index, element);
+        return lastValue;
     }
 
     @Override
@@ -194,6 +206,21 @@ public class FixedSizeIntegerSegmentTree extends FixedSizeSegmentTree<Long> {
             long rightChild = getCombinationLOutRIn(segmentRightBorder, currentChildElementMiddleBorder, currentRightBorder, currentElementRealIndex * 2 + 1);
             return operator.applyAsLong(leftChild, rightChild);
         }
+    }
+
+    @Override
+    public ListIterator<Long> listIterator() {
+        return new Iter();
+    }
+
+    @Override
+    public ListIterator<Long> listIterator(int index) {
+        return new Iter(index);
+    }
+
+    @Override
+    public FixedSizeIntegerSegmentTree subList(int fromIndex, int toIndex) {
+        return new FixedSizeIntegerSegmentTree.SubList(fromIndex, toIndex - fromIndex);
     }
 
     @Override
@@ -341,8 +368,7 @@ public class FixedSizeIntegerSegmentTree extends FixedSizeSegmentTree<Long> {
         }
     }
 
-    protected class SubList extends AbstractList<Long> {
-
+    protected class SubList extends FixedSizeIntegerSegmentTree {
 
         private final int indexOffset;
 
@@ -352,26 +378,32 @@ public class FixedSizeIntegerSegmentTree extends FixedSizeSegmentTree<Long> {
         private final int[] realIndexIndex = FixedSizeIntegerSegmentTree.this.realIndexIndex;
 
         SubList(int indexOffset, int size) {
+            super(size, null, FixedSizeIntegerSegmentTree.this.elements);
             this.indexOffset = indexOffset;
             this.size = size;
         }
 
         @Override
-        public boolean add(Long type) {
-            throw new UnsupportedOperationException();
+        public long set(int index, long element) {
+            checkIndex(index);
+            return FixedSizeIntegerSegmentTree.this.set(index + indexOffset, element);
         }
 
         @Override
-        public Long set(int index, Long element) {
-            if (index + indexOffset >= size) {
-                throw new IndexOutOfBoundsException("Index: " + index + ", Size: " + size);
-            }
-            return setValueAndGetCombination(index + indexOffset, element);
+        public long setValueAndGetCombination(int index, long value) {
+            checkIndex(index);
+            return FixedSizeIntegerSegmentTree.this.setValueAndGetCombination(index + indexOffset, value);
         }
 
         @Override
-        public Long remove(int index) {
-            throw new UnsupportedOperationException();
+        public Long getCombination() {
+            return FixedSizeIntegerSegmentTree.this.getCombination(indexOffset, indexOffset + size);
+        }
+
+        @Override
+        public Long getCombination(int segmentLeftBorder, int segmentRightBorder) {
+            checkRange(segmentLeftBorder, segmentRightBorder);
+            return FixedSizeIntegerSegmentTree.this.getCombination(segmentLeftBorder + indexOffset, segmentRightBorder + indexOffset);
         }
 
         @Override
@@ -395,21 +427,6 @@ public class FixedSizeIntegerSegmentTree extends FixedSizeSegmentTree<Long> {
         }
 
         @Override
-        public void clear() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public boolean addAll(int index, Collection<? extends Long> c) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public Iterator<Long> iterator() {
-            return new FixedSizeIntegerSegmentTree.Iter(indexOffset, indexOffset, indexOffset + size);
-        }
-
-        @Override
         public ListIterator<Long> listIterator() {
             return new FixedSizeIntegerSegmentTree.Iter(indexOffset, indexOffset, indexOffset + size);
         }
@@ -420,18 +437,9 @@ public class FixedSizeIntegerSegmentTree extends FixedSizeSegmentTree<Long> {
         }
 
         @Override
-        public List<Long> subList(int fromIndex, int toIndex) {
+        public FixedSizeIntegerSegmentTree subList(int fromIndex, int toIndex) {
+            checkRange(fromIndex, toIndex);
             return new FixedSizeIntegerSegmentTree.SubList(indexOffset + fromIndex, toIndex - fromIndex);
-        }
-
-        @Override
-        protected void removeRange(int fromIndex, int toIndex) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public boolean isEmpty() {
-            return super.isEmpty();
         }
 
         @Override
@@ -446,7 +454,7 @@ public class FixedSizeIntegerSegmentTree extends FixedSizeSegmentTree<Long> {
 
         @Override
         public Object[] toArray() {
-            Object[] copy = new Long[size];
+            Object[] copy = new Object[size];
             for(int i = indexOffset; i < size + indexOffset; i++) {
                 copy[i] = elements[realIndexIndex[i]];
             }
@@ -479,38 +487,37 @@ public class FixedSizeIntegerSegmentTree extends FixedSizeSegmentTree<Long> {
         }
 
         @Override
-        public boolean remove(Object o) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public boolean containsAll(Collection<?> c) {
-            return super.containsAll(c);
-        }
-
-        @Override
-        public boolean addAll(Collection<? extends Long> c) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public boolean removeAll(Collection<?> c) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public boolean retainAll(Collection<?> c) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
         public Long get(int index) {
+            checkIndex(index);
             return FixedSizeIntegerSegmentTree.this.get(index + indexOffset);
         }
 
         @Override
         public int size() {
             return size;
+        }
+
+        @Override
+        public String toString() {
+            return "section [" + indexOffset + ", " + indexOffset + size + ") of " + FixedSizeIntegerSegmentTree.this;
+        }
+
+        private void checkIndex(int index) throws IndexOutOfBoundsException {
+            if (index + indexOffset >= size) {
+                throw new IndexOutOfBoundsException("Index: " + index + ", Size: " + size);
+            }
+        }
+
+        private void checkRange(int segmentLeftBorder, int segmentRightBorder) throws IndexOutOfBoundsException {
+            if (segmentLeftBorder >= segmentRightBorder) {
+                throw new IndexOutOfBoundsException("SegmentLeftBorder: " + segmentLeftBorder + "SegmentRightBorder: " + segmentRightBorder + " Illegal Segment.");
+            }
+            if (segmentLeftBorder < 0) {
+                throw new IndexOutOfBoundsException("SegmentLeftBorder: " + segmentLeftBorder);
+            }
+            if (segmentRightBorder + indexOffset >= size) {
+                throw new IndexOutOfBoundsException("SegmentRightBorder: " + segmentRightBorder + ", Size: " + size);
+            }
         }
     }
 }

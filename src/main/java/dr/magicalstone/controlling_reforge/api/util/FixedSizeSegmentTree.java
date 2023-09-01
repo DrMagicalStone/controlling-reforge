@@ -455,7 +455,7 @@ public class FixedSizeSegmentTree<Type> extends AbstractList<Type> implements Ra
      * @return a sub list of this list
      */
     @Override
-    public List<Type> subList(int fromIndex, int toIndex) {
+    public FixedSizeSegmentTree<Type> subList(int fromIndex, int toIndex) {
         return new SubList(fromIndex, toIndex - fromIndex);
     }
 
@@ -556,7 +556,7 @@ public class FixedSizeSegmentTree<Type> extends AbstractList<Type> implements Ra
         }
     }
 
-    protected class SubList extends AbstractList<Type> {
+    protected class SubList extends FixedSizeSegmentTree<Type> {
 
         private final int indexOffset;
 
@@ -566,26 +566,32 @@ public class FixedSizeSegmentTree<Type> extends AbstractList<Type> implements Ra
         private final int[] realIndexIndex = FixedSizeSegmentTree.this.realIndexIndex;
 
         SubList(int indexOffset, int size) {
+            super(size, null, FixedSizeSegmentTree.this.elements);
             this.indexOffset = indexOffset;
             this.size = size;
         }
 
         @Override
-        public boolean add(Type type) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
         public Type set(int index, Type element) {
-            if (index + indexOffset >= size) {
-                throw new IndexOutOfBoundsException("Index: " + index + ", Size: " + size);
-            }
-            return setValueAndGetCombination(index + indexOffset, element);
+            checkIndex(index);
+            return FixedSizeSegmentTree.this.set(index + indexOffset, element);
         }
 
         @Override
-        public Type remove(int index) {
-            throw new UnsupportedOperationException();
+        public Type setValueAndGetCombination(int index, @Nonnull Type value) {
+            checkIndex(index);
+            return FixedSizeSegmentTree.this.setValueAndGetCombination(index + indexOffset, value);
+        }
+
+        @Override
+        public Type getCombination() {
+            return FixedSizeSegmentTree.this.getCombination(indexOffset, indexOffset + size);
+        }
+
+        @Override
+        public Type getCombination(int segmentLeftBorder, int segmentRightBorder) {
+            checkRange(segmentLeftBorder, segmentRightBorder);
+            return FixedSizeSegmentTree.this.getCombination(segmentLeftBorder + indexOffset, segmentRightBorder + indexOffset);
         }
 
         @Override
@@ -609,21 +615,6 @@ public class FixedSizeSegmentTree<Type> extends AbstractList<Type> implements Ra
         }
 
         @Override
-        public void clear() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public boolean addAll(int index, Collection<? extends Type> c) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public Iterator<Type> iterator() {
-            return new Iter(indexOffset, indexOffset, indexOffset + size);
-        }
-
-        @Override
         public ListIterator<Type> listIterator() {
             return new Iter(indexOffset, indexOffset, indexOffset + size);
         }
@@ -634,18 +625,9 @@ public class FixedSizeSegmentTree<Type> extends AbstractList<Type> implements Ra
         }
 
         @Override
-        public List<Type> subList(int fromIndex, int toIndex) {
+        public FixedSizeSegmentTree<Type> subList(int fromIndex, int toIndex) {
+            checkRange(fromIndex, toIndex);
             return new SubList(indexOffset + fromIndex, toIndex - fromIndex);
-        }
-
-        @Override
-        protected void removeRange(int fromIndex, int toIndex) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public boolean isEmpty() {
-            return super.isEmpty();
         }
 
         @Override
@@ -682,38 +664,32 @@ public class FixedSizeSegmentTree<Type> extends AbstractList<Type> implements Ra
         }
 
         @Override
-        public boolean remove(Object o) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public boolean containsAll(Collection<?> c) {
-            return super.containsAll(c);
-        }
-
-        @Override
-        public boolean addAll(Collection<? extends Type> c) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public boolean removeAll(Collection<?> c) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public boolean retainAll(Collection<?> c) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
         public Type get(int index) {
+            checkIndex(index);
             return FixedSizeSegmentTree.this.get(index + indexOffset);
         }
 
         @Override
         public int size() {
             return size;
+        }
+
+        private void checkIndex(int index) throws IndexOutOfBoundsException {
+            if (index + indexOffset >= size) {
+                throw new IndexOutOfBoundsException("Index: " + index + ", Size: " + size);
+            }
+        }
+
+        private void checkRange(int segmentLeftBorder, int segmentRightBorder) throws IndexOutOfBoundsException {
+            if (segmentLeftBorder >= segmentRightBorder) {
+                throw new IndexOutOfBoundsException("SegmentLeftBorder: " + segmentLeftBorder + "SegmentRightBorder: " + segmentRightBorder + " Illegal Segment.");
+            }
+            if (segmentLeftBorder < 0) {
+                throw new IndexOutOfBoundsException("SegmentLeftBorder: " + segmentLeftBorder);
+            }
+            if (segmentRightBorder + indexOffset >= size) {
+                throw new IndexOutOfBoundsException("SegmentRightBorder: " + segmentRightBorder + ", Size: " + size);
+            }
         }
     }
 }
